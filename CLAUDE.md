@@ -25,6 +25,7 @@ npm run db:generate         # Prisma client -> src/generated/prisma (gitignored)
 npm run db:push             # cria/sincroniza dev.db (SQLite)
 npm run db:seed             # projetos de exemplo (prisma/seed.ts)
 npm run dev                 # http://localhost:3000
+npm run dev:vr              # HTTPS autoassinado em 0.0.0.0:3001 (--mode vr) para testar WebXR no Meta Quest
 npm run build               # build de produção (nitro)
 npm test                    # Vitest (vitest run) — deve ficar 100% verde antes de encerrar qualquer tarefa
 npm run test:watch          # Vitest em modo watch (use durante o ciclo RED→GREEN)
@@ -105,7 +106,7 @@ Se precisar investigar mais: comandos `ItemCommands.*`, `ProlongedAction.*` e `P
 - Prefira `expect` do Vitest em testes novos (alguns arquivos antigos ainda usam `node:assert/strict` + `describe/it` do vitest).
 - Testes existentes: `draw-snap` (encaixe de desenho em paredes/T), `nested-rooms` (cômodo dentro de cômodo com 2 paredes),
   `rect-room` (retângulo reaproveitando paredes), `topology` (`insetPolygon`), `camera` (zoom/roda/guias), `placement` (parede/janela),
-  `wall-resize` (alterar comprimento), `length-input` (ler/formatar medida digitada), `wall-label` (posição dos rótulos), `axis-stick` (aderência aos eixos), `layers` (camadas), `wall-merge` (junção de paredes), `wall-faces` (encaixe nas faces da parede), `wall-items` (itens colados na parede), `layer-tree` (árvore de camadas), `wall-cutaway` (paredes estilo The Sims no 3D), `room-stack` (pisos aninhados no 3D), `orbit-limits` (faixa de zoom do 3D), `groups` (comandos de grupo), `dock-tools` (ferramentas do dock), `view-layout` (posição do 2D e do 3D por modo), `drawer-mode` (gaveta de objetos), `catalog-groups` (seções do catálogo e scroll-spy), `door-swing`, `store`.
+  `wall-resize` (alterar comprimento), `length-input` (ler/formatar medida digitada), `wall-label` (posição dos rótulos), `axis-stick` (aderência aos eixos), `layers` (camadas), `wall-merge` (junção de paredes), `wall-faces` (encaixe nas faces da parede), `wall-items` (itens colados na parede), `layer-tree` (árvore de camadas), `wall-cutaway` (paredes estilo The Sims no 3D), `room-stack` (pisos aninhados no 3D), `orbit-limits` (faixa de zoom do 3D), `groups` (comandos de grupo), `dock-tools` (ferramentas do dock), `vr-locomotion` (andar/teleportar/portas em VR), `vr-link` (link do botão "Ver em VR"), `view-layout` (posição do 2D e do 3D por modo), `drawer-mode` (gaveta de objetos), `catalog-groups` (seções do catálogo e scroll-spy), `door-swing`, `store`.
 - Interação com mouse/arrastar **não** é testável pelo REA; cubra a regra em função pura e deixe a verificação visual para o usuário.
 
 ## Modelo do canvas 2D (estudo do Figma — ver `docs/figma-canvas-study.md`)
@@ -273,6 +274,31 @@ formulários, autenticação (better-auth está instalado mas não usado).
 - **Roda do mouse no 3D:** `OrbitControls` com `zoomToCursor = true` (como o 2D), `zoomSpeed` 0,8 e faixa de zoom por tamanho da casa
   (`orbitLimits`: mín. 1 m, máx. `max(40, 6×tamanho)` até 280 m), aplicada em `frameProject`. Antes não havia limite e dava para
   atravessar o modelo ou perder a casa de vista. A página em si não rola (o editor é `h-dvh`); só o catálogo à esquerda tem scroll.
+
+## Realidade virtual (WebXR no Meta Quest, sem instalar nada) — `vr-view.tsx`, `vr-locomotion.ts`, rota `/vr/$projectId`
+
+- Rota **somente leitura** `/vr/$projectId` (`ssr: false`, sem login) monta `buildScene(project, { cutaway: false })` (paredes inteiras, teto ligado) e mostra
+  "Entrar em VR". Sem headset/HTTPS ela mostra o motivo em pt-BR e uma órbita de pré-visualização. Só o **piso 0** é caminhável (sem escadas ainda).
+- **WebXR exige HTTPS**; o IP da rede local em HTTP não conta como contexto seguro. `npm run dev:vr` liga `@vitejs/plugin-basic-ssl` via `--mode vr`
+  (o `npm run dev` normal continua em HTTP/3000). No Quest: abrir `https://<IP-do-PC>:3001/vr/<id>` e aceitar o aviso de certificado. Firewall do Windows
+  precisa liberar o `node.exe` no perfil da rede (Privado).
+- **Controles:** analógico esquerdo = andar (relativo ao olhar); direito de lado = giro em passos de 30° (em torno da cabeça); direito para a frente =
+  arco de teleporte, soltar teleporta (verde = válido, vermelho = parede no caminho). A cabeça mexe dentro de um `rig`; colisão e teleporte movem o rig.
+- Lógica pura e testada (`vr-locomotion.test.ts`): `moveWithCollision` (círculo de 25 cm contra retângulos orientados das paredes, encosta e desliza;
+  sub-passos de 10 cm evitam atravessar), `isPassable` (**porta e porta dupla só passam ABERTAS; arco, porta de correr e garagem são sempre livres
+  (não têm animação de abrir); janela nunca**), `canTeleport`, `arcFloorHit` (parábola, alcance 12 m), `snapTurn`, `spawnPoint`. **Armadilha:** a colisão tem de ser incremental (somar o deslocamento da colisão ao passo seguinte); recalcular
+  a partir da reta ideal a cada sub-passo descarta o empurrão e a pessoa atravessa a parede.
+- **Portas interativas:** o raio de cada controle (alcance 6 m) fica verde e destaca a porta de giro apontada; **gatilho** abre/fecha com animação
+  (`stepLevel` 0..1 sobre `pivot.userData.swing`, marcado em `buildOpening`). Paredes/móveis na frente escondem a porta atrás deles. O estado fica numa
+  **cópia** do projeto (`structuredClone`): não altera o salvo; o `open` salvo no editor vale como estado inicial. Na pré-visualização no PC, clicar na
+  folha também abre/fecha. Em dev, `window.__vr` (`doors/isOpen/focus/head`) serve aos testes com Playwright. Verificado no Chrome (clique na folha
+  fecha/abre; clique no vão vazio não faz nada). **NÃO verificado:** o gatilho no Quest.
+- **Botão "Ver em VR"** (`top-actions.tsx` → `vr-dialog.tsx`): salva, mostra o link `https://<ip>:3001/vr/<id>` (IP do PC via `getLanAddress`/`pickLanAddress`,
+  que ignora WSL/VPN/Hamachi), copiar, abrir e "Tentar abrir no Quest" (`metaOpenUrl` = atalho `oculus.com/open_url`, **experimental, não verificado**).
+  O endereço digitado é sempre forçado para https e lembrado no `localStorage`.
+- Sem sombras em tempo real (Quest 2 precisa de 72 fps), `setFoveation(1)`. **NÃO verificado:** entrar em VR de verdade no Quest, desempenho e conforto
+  (a parte de WebXR/controles não é testável pelo REA/Playwright); verificado no Chrome do PC só a renderização e a mensagem de "sem headset".
+- Próximos passos: validar `open_url` da Meta, QR code, escadas/pisos, token de compartilhamento, deploy HTTPS real, abrir porta de correr/garagem com animação.
 
 ## Interface "tela livre" (B1 refinado) — `editor.tsx`
 
