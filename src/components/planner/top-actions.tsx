@@ -1,5 +1,6 @@
 import {
 	Download,
+	Glasses,
 	Grid3x3,
 	Loader2,
 	Maximize,
@@ -9,6 +10,7 @@ import {
 	Settings2,
 	Undo2,
 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "#/components/ui/button.tsx";
 import {
 	DropdownMenu,
@@ -33,6 +35,7 @@ import {
 } from "#/lib/planner/export";
 import { type PlannerStore, usePlanner } from "#/lib/planner/store";
 import { cn } from "#/lib/utils";
+import { VrDialog } from "./vr-dialog";
 
 const card = "rounded-xl bg-card shadow-md ring-1 ring-black/5";
 
@@ -76,6 +79,8 @@ export function TopActions({
 	const showRoomLabels = usePlanner(store, (s) => s.showRoomLabels);
 	const smartGuides = usePlanner(store, (s) => s.smartGuides);
 	const wheelZoom = usePlanner(store, (s) => s.wheelZoom);
+
+	const [vrOpen, setVrOpen] = useState(false);
 
 	const svgEl = () =>
 		document.querySelector<SVGSVGElement>(".planner-canvas svg");
@@ -232,6 +237,24 @@ export function TopActions({
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
+			<Button
+				variant="outline"
+				size="sm"
+				className={cn(card, "h-9 border-0")}
+				aria-label="Ver no Meta Quest"
+				onClick={() => {
+					// o Quest lê a versão salva: garante que ela está em dia antes de mostrar o link
+					onSave();
+					setVrOpen(true);
+				}}
+			>
+				<Glasses /> <span className="max-2xl:hidden">Ver em VR</span>
+			</Button>
+			<VrDialog
+				projectId={store.getState().project.id}
+				open={vrOpen}
+				onOpenChange={setVrOpen}
+			/>
 			<Button
 				size="sm"
 				className="h-9 px-4 shadow-md"
