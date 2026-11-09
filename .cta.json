@@ -1,0 +1,30 @@
+{
+  "bundler": "vite",
+  "projectName": "house-builder",
+  "mode": "file-router",
+  "typescript": true,
+  "packageManager": "npm",
+  "includeExamples": false,
+  "tailwind": true,
+  "projectPreset": "default",
+  "routerOnly": false,
+  "addOnOptions": {
+    "prisma": {
+      "database": "sqlite"
+    }
+  },
+  "git": true,
+  "install": true,
+  "intent": true,
+  "version": 1,
+  "framework": "react",
+  "chosenAddOns": [
+    "biome",
+    "vercel",
+    "prisma",
+    "form",
+    "shadcn",
+    "t3env",
+    "better-auth"
+  ]
+}
