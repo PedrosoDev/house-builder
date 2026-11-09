@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "vite dev --port 3000",
+    "dev:vr": "vite dev --mode vr --host 0.0.0.0 --port 3001",
     "generate-routes": "tsr generate",
     "build": "vite build",
     "preview": "vite preview",
@@ -57,6 +58,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@types/three": "^0.186.0",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-react": "^6.0.1",
     "dotenv-cli": "^11.0.0",
     "tsx": "^4.21.0",
