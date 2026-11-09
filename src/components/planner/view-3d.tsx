@@ -216,6 +216,8 @@ function buildWall(wall: Wall, openings: Opening[], floorHeightCm: number) {
 
 function buildOpening(o: Opening, cx: number, wall: Wall) {
 	const g = new THREE.Group();
+	// a visita em VR acha as portas por aqui (vr-view.tsx)
+	g.userData.openingId = o.id;
 	const width = o.width * M;
 	const height = Math.min(o.height * M, 5);
 	const sill = Math.max(o.sill * M, 0.01);
@@ -315,7 +317,9 @@ function buildOpening(o: Opening, cx: number, wall: Wall) {
 			m.position.set((dir * lw) / 2, sill + (height - fw) / 2, 0);
 			m.castShadow = true;
 			pivot.add(m);
-			if (o.open) pivot.rotation.y = side * dir * -Math.PI * 0.45;
+			// ângulo da folha toda aberta: a visita em VR anima entre 0 e este valor
+			pivot.userData.swing = side * dir * -Math.PI * 0.45;
+			if (o.open) pivot.rotation.y = pivot.userData.swing;
 			g.add(pivot);
 		};
 		if (o.kind === "door") {
@@ -785,7 +789,7 @@ export function buildScene(project: Project, opts: { cutaway: boolean }) {
 	return root;
 }
 
-const SKY: Record<
+export const SKY: Record<
 	string,
 	{ bg: string; sun: number; amb: number; sunColor: string }
 > = {
