@@ -106,7 +106,7 @@ Se precisar investigar mais: comandos `ItemCommands.*`, `ProlongedAction.*` e `P
 - Prefira `expect` do Vitest em testes novos (alguns arquivos antigos ainda usam `node:assert/strict` + `describe/it` do vitest).
 - Testes existentes: `draw-snap` (encaixe de desenho em paredes/T), `nested-rooms` (cômodo dentro de cômodo com 2 paredes),
   `rect-room` (retângulo reaproveitando paredes), `topology` (`insetPolygon`), `camera` (zoom/roda/guias), `placement` (parede/janela),
-  `wall-resize` (alterar comprimento), `length-input` (ler/formatar medida digitada), `wall-label` (posição dos rótulos), `axis-stick` (aderência aos eixos), `layers` (camadas), `wall-merge` (junção de paredes), `wall-faces` (encaixe nas faces da parede), `wall-items` (itens colados na parede), `layer-tree` (árvore de camadas), `wall-cutaway` (paredes estilo The Sims no 3D), `room-stack` (pisos aninhados no 3D), `orbit-limits` (faixa de zoom do 3D), `groups` (comandos de grupo), `dock-tools` (ferramentas do dock), `vr-locomotion` (andar/teleportar/portas em VR), `vr-link` (link do botão "Ver em VR"), `view-layout` (posição do 2D e do 3D por modo), `drawer-mode` (gaveta de objetos), `catalog-groups` (seções do catálogo e scroll-spy), `door-swing`, `store`.
+  `wall-resize` (alterar comprimento), `length-input` (ler/formatar medida digitada), `wall-label` (posição dos rótulos), `axis-stick` (aderência aos eixos), `layers` (camadas), `wall-merge` (junção de paredes), `wall-faces` (encaixe nas faces da parede), `wall-items` (itens colados na parede), `layer-tree` (árvore de camadas), `wall-cutaway` (paredes estilo The Sims no 3D), `room-stack` (pisos aninhados no 3D), `orbit-limits` (faixa de zoom do 3D), `groups` (comandos de grupo), `dock-tools` (ferramentas do dock), `vr-locomotion` (andar/teleportar/portas em VR), `vr-link` (link do botão "Ver em VR"), `view-layout` (posição do 2D e do 3D por modo), `drawer-mode` (gaveta de objetos), `catalog-groups` (seções do catálogo e scroll-spy), `door-swing`, `pwa` (manifesto + service worker), `store`.
 - Interação com mouse/arrastar **não** é testável pelo REA; cubra a regra em função pura e deixe a verificação visual para o usuário.
 
 ## Modelo do canvas 2D (estudo do Figma — ver `docs/figma-canvas-study.md`)
@@ -358,3 +358,14 @@ formulários, autenticação (better-auth está instalado mas não usado).
   e faz fade; a seção que sai continua montada por 300 ms (`useDelayedUnmount`) com `opacity-0` e `pointer-events-none`; a que entra usa `animate-in fade-in-0`. O 3D fica por
   cima (`z-[1]`, `bg-background`) para o cruzamento. Verificado no navegador medindo opacidade e posição durante as trocas (2D→3D→split→2D).
 - **Padrões do 3D** (`DEFAULT_VIEW3D` em `view-layout.ts`, testado): "Esconder teto e telhado" vem **ligado** por padrão (`cutaway: true`), câmera em órbita e paredes em **Auto**.
+
+## PWA (instalável no computador) — `public/manifest.webmanifest`, `public/sw.js`, `scripts/generate-icons.mjs`
+
+- Manifesto (`standalone`, pt-BR, tema `#18181b`) + ícones PNG em `public/icons` (192, 512 e maskable 512), gerados por `node scripts/generate-icons.mjs`
+  (sem dependências; edite o desenho do ícone no script e rode de novo). `__root.tsx` liga manifesto, ícones e `theme-color`.
+- `sw.js` (JS puro em `public/`, sem plugin): navegação = rede primeiro com cópia de reserva; assets same-origin = cache primeiro. **Nunca** intercepta
+  não-GET, `/_serverFn*` nem `/api/*` (dados sempre da rede). Para invalidar o cache, troque `VERSION` em `sw.js`. Registrado só em produção
+  (`useRegisterServiceWorker`, ignora `import.meta.env.DEV`) — **para testar a instalação use `npm run build` + `node .output/server/index.mjs`**, não o `npm run dev`.
+- Chrome/Edge só oferecem "Instalar" em HTTPS ou `localhost`. Testes: `src/lib/pwa/pwa.test.ts` (manifesto e `sw.js` rodados num `vm`).
+  NÃO verificado: o botão de instalar no navegador e o funcionamento offline de verdade (só testado o servidor servindo os arquivos e o SW no sandbox).
+
